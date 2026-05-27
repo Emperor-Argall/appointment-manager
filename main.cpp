@@ -8,6 +8,8 @@
 
 int state{1};
 
+bool shaky{false};
+
 using namespace std;
 
 void read() {
@@ -63,6 +65,46 @@ sf::ConvexShape createSquircle(vec2 topLeft, vec2 size, sf::Color color) {
 }
 
 
+void shake(sf::RenderWindow& window) {
+        window.display();
+        sf::View defaultView = window.getView();
+        sf::View cameraView = defaultView;
+
+        sf::Vector2u windowSize = window.getSize();
+        sf::Texture backgroundTexture;
+        if (!backgroundTexture.resize({windowSize.x, windowSize.y})) {
+                return;
+        }
+        backgroundTexture.update(window);
+        sf::Sprite backgroundSprite(backgroundTexture);
+
+        sf::Clock shakeClock;
+        const float duration = 0.35f;
+        const float magnitude = 12.f;
+        const float speed = 65.f;
+
+
+
+        while (shakeClock.getElapsedTime().asSeconds() < duration) {
+                float elapsed = shakeClock.getElapsedTime().asSeconds();
+
+
+                float damping = 1.f - (elapsed / duration);
+                float offsetX = std::sin(elapsed * speed) * magnitude * damping;
+
+                cameraView.setCenter(defaultView.getCenter() + sf::Vector2f(offsetX, 0.f));
+                window.setView(cameraView);
+
+                window.clear(sf::Color(30, 30, 32));
+
+                window.draw(backgroundSprite);
+
+
+                window.display();
+        }
+
+        window.setView(defaultView);
+}
 
 
 
@@ -120,43 +162,26 @@ public:
                 }
         }
 
-        void block(sf::RenderWindow& window) {
-                sf::View defaultView = window.getView();
-                sf::View cameraView = defaultView;
-
-                sf::Vector2u windowSize = window.getSize();
-                sf::Texture backgroundTexture;
-                if (!backgroundTexture.resize({windowSize.x, windowSize.y})) {
-                        return;
-                }
-                backgroundTexture.update(window);
-                sf::Sprite backgroundSprite(backgroundTexture);
-
-                sf::Clock shakeClock;
-                const float duration = 0.35f;
-                const float magnitude = 12.f;
-                const float speed = 65.f;
+        void block(sf::RenderWindow& window, sf::Sound& sound) {
 
 
-                while (shakeClock.getElapsedTime().asSeconds() < duration) {
-                        float elapsed = shakeClock.getElapsedTime().asSeconds();
+                sound.play();
 
-
-                        float damping = 1.f - (elapsed / duration);
-                        float offsetX = std::sin(elapsed * speed) * magnitude * damping;
-
-                        cameraView.setCenter(defaultView.getCenter() + sf::Vector2f(offsetX, 0.f));
-                        window.setView(cameraView);
-
-                        window.clear(sf::Color(30, 30, 32));
-
-                        window.draw(backgroundSprite);
-
-
-                        window.display();
+                // popravka za audio driver
+                sf::Clock safetyTimeout;
+                while (sound.getStatus() != sf::Sound::Status::Playing && safetyTimeout.getElapsedTime().asMilliseconds() < 50) {
+                        while (auto event = window.pollEvent()) {
+                                // da se ne crashuje pod peer pressure
+                                if (event->is<sf::Event::Closed>()) {
+                                        window.close();
+                                        return;
+                                }
+                        }
                 }
 
-                window.setView(defaultView);
+
+
+
         }
 
 
@@ -174,8 +199,12 @@ public:
                                 text+=static_cast<char>(c);
                         }
                         else {
-                                sound.play();
-                                block(window);
+
+                                // window.display();
+
+                                ::shaky = true;
+
+                                // block(window, sound);
                         }
 
                 }
@@ -250,9 +279,13 @@ int main() {
         if (!font.openFromFile("../assets/bold.OTF")) cerr << "Error loading font." << endl;
 
         sf::SoundBuffer blockBuffer;
-        if (!blockBuffer.loadFromFile("../assets/cutBlock.mp3")) cerr << "Error loading sound." << endl;
+        if (!blockBuffer.loadFromFile("../assets/cutBlock.wav")) cerr << "Error loading sound." << endl;
         sf::Sound blockSound(blockBuffer);
+        blockSound.setVolume(100);
 
+        blockSound.play();
+        sf::sleep(sf::milliseconds(1));
+        blockSound.stop();
 
         while (window.isOpen()) {
                 while (auto event = window.pollEvent()) {
@@ -271,6 +304,13 @@ int main() {
                 window.clear(sf::Color::Black);
 
                 ui(boxes, window, font);
+
+                if (shaky) {
+                        blockSound.stop();
+                        blockSound.play();
+                        shake(window);
+                        ::shaky = false;
+                }
 
 
                 window.display();
