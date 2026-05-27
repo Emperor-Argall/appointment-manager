@@ -137,12 +137,12 @@ public:
         }
 
 
-        void displayText(sf::Font& font, unsigned int size, sf::RenderWindow& window) {
+        void displayText(sf::Font& font, unsigned int Fsize, sf::RenderWindow& window) {
                 sf::Text t(font);
-                t.setCharacterSize(size);
+                t.setCharacterSize(Fsize);
                 t.setFillColor(sf::Color::Black);
                 t.setString(text);
-                t.setPosition({std::floor(pos.x + 10.f), std::floor(pos.y + 10.f)});
+                t.setPosition({std::floor(pos.x + size.x/2 - Fsize/2 * text.length()/(1.8f)), std::floor(pos.y + size.y/2 - Fsize/2)});
 
                 window.draw(t);
 
