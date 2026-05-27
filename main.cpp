@@ -120,20 +120,71 @@ public:
                 }
         }
 
-        void input(char32_t c) {
+        void block(sf::RenderWindow& window) {
+                sf::View defaultView = window.getView();
+                sf::View cameraView = defaultView;
+
+                sf::Vector2u windowSize = window.getSize();
+                sf::Texture backgroundTexture;
+                if (!backgroundTexture.resize({windowSize.x, windowSize.y})) {
+                        return;
+                }
+                backgroundTexture.update(window);
+                sf::Sprite backgroundSprite(backgroundTexture);
+
+                sf::Clock shakeClock;
+                const float duration = 0.35f;
+                const float magnitude = 12.f;
+                const float speed = 65.f;
+
+
+                while (shakeClock.getElapsedTime().asSeconds() < duration) {
+                        float elapsed = shakeClock.getElapsedTime().asSeconds();
+
+
+                        float damping = 1.f - (elapsed / duration);
+                        float offsetX = std::sin(elapsed * speed) * magnitude * damping;
+
+                        cameraView.setCenter(defaultView.getCenter() + sf::Vector2f(offsetX, 0.f));
+                        window.setView(cameraView);
+
+                        window.clear(sf::Color(30, 30, 32));
+
+                        window.draw(backgroundSprite);
+
+
+                        window.display();
+                }
+
+                window.setView(defaultView);
+        }
+
+
+
+
+
+        void input(char32_t c, sf::RenderWindow& window, sf::Sound& sound) {
                 const int BACKSPACE{8};
                 const int SPACE{32};
 
-                int d = static_cast<int>(c);;
+                int d = static_cast<int>(c);
 
                 if ((d >= 65 && d <= 90) || (d >= 97 && d <= 122) || d == SPACE) {
-                        text+=static_cast<char>(c);
+                        if ((size.x - 10) - text.length() * 12 > 0) {
+                                text+=static_cast<char>(c);
+                        }
+                        else {
+                                sound.play();
+                                block(window);
+                        }
+
                 }
                 else if (d == BACKSPACE) {
                         if (text.length() > 0) {text.pop_back();}
                 }
 
-                 cout << text << "|\n" << std::flush;
+                 // cout << text << "|\n" << std::flush;
+
         }
 
 
@@ -142,7 +193,7 @@ public:
                 t.setCharacterSize(Fsize);
                 t.setFillColor(sf::Color::Black);
                 t.setString(text);
-                t.setPosition({std::floor(pos.x + size.x/2 - Fsize/2 * text.length()/(1.8f)), std::floor(pos.y + size.y/2 - Fsize/2)});
+                t.setPosition({std::floor(pos.x + size.x/2 - Fsize/2 * text.length()/(1.8f)), std::floor(pos.y + size.y/2 - Fsize/4*3)});
 
                 window.draw(t);
 
@@ -198,8 +249,9 @@ int main() {
         sf::Font font;
         if (!font.openFromFile("../assets/bold.OTF")) cerr << "Error loading font." << endl;
 
-
-
+        sf::SoundBuffer blockBuffer;
+        if (!blockBuffer.loadFromFile("../assets/cutBlock.mp3")) cerr << "Error loading sound." << endl;
+        sf::Sound blockSound(blockBuffer);
 
 
         while (window.isOpen()) {
@@ -210,7 +262,7 @@ int main() {
                         if (const auto* textEvent = event->getIf<sf::Event::TextEntered>()) {
                                 for (auto& box : boxes) {
                                         if (box.isSelected()) {
-                                                box.input(textEvent->unicode);
+                                                box.input(textEvent->unicode, window, blockSound);
                                         }
                                 }
 
