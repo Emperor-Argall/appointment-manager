@@ -22,6 +22,70 @@ struct vec2 {
         float x,y;
 };
 
+
+bool isSquircle(vec2 pos, vec2 origin, float w, float h) {
+        float left = pow((2*(pos.x - origin.x)/w - 1), 4);
+        float right = pow((2*(pos.y - origin.y)/h - 1), 4);
+
+        return right + left <= 1.f;
+}
+
+sf::ConvexShape createSquircle(vec2 topLeft, vec2 size, sf::Color color) {
+        sf::ConvexShape squircle;
+
+        // broj tacaka
+
+        const unsigned int pointCount = 64;
+        squircle.setPointCount(pointCount);
+
+        // fancy math
+        vec2 center = { topLeft.x + (size.x / 2.f), topLeft.y + (size.y / 2.f) };
+        float rx = size.x / 2.f;
+        float ry = size.y / 2.f;
+        const float pi = 3.14159265f;
+
+        for (unsigned int i = 0; i < pointCount; ++i) {
+                // trigonometrija sa gugla za ugao
+                float angle = (static_cast<float>(i) / pointCount) * 2.f * pi;
+                float cosA = std::cos(angle);
+                float sinA = std::sin(angle);
+
+                // koordinate za tacke
+                float xOffset = rx * (cosA >= 0 ? 1.f : -1.f) * std::sqrt(std::abs(cosA));
+                float yOffset = ry * (sinA >= 0 ? 1.f : -1.f) * std::sqrt(std::abs(sinA));
+
+                // postavljanje tacaka
+                squircle.setPoint(i, sf::Vector2f(center.x + xOffset, center.y + yOffset));
+        }
+
+        squircle.setFillColor(color);
+        return squircle;
+}
+
+
+
+
+
+void squircle_failed(sf::RenderWindow& window,vec2 pos, vec2 size, bool selected) {
+        sf::ConvexShape shape;
+        shape.setFillColor(sf::Color::White);
+        shape.setOutlineThickness(3);
+        if (selected) {
+                shape.setOutlineColor(sf::Color::Green);
+        }
+        else {
+                shape.setOutlineColor(sf::Color::Black);
+        }
+        shape.setPointCount(4);
+        shape.setPoint(0, {pos.x, pos.y});
+        shape.setPoint(1, {pos.x + size.x, pos.y});
+        shape.setPoint(2, {pos.x + size.x, pos.y + size.y});
+        shape.setPoint(3, {pos.x, pos.y + size.y});
+        shape.setFillColor(sf::Color::White);
+
+        window.draw(shape);
+}
+
 class textBox {
 private:
         vec2 pos;
@@ -73,7 +137,7 @@ public:
         }
 
 
-        void displayText(sf::Font& font, float size, sf::RenderWindow& window) {
+        void displayText(sf::Font& font, unsigned int size, sf::RenderWindow& window) {
                 sf::Text t(font);
                 t.setCharacterSize(size);
                 t.setFillColor(sf::Color::Black);
@@ -90,21 +154,8 @@ public:
 
 
         void Draw(sf::RenderWindow& window) {
-                sf::ConvexShape shape;
-                shape.setFillColor(sf::Color::White);
-                shape.setOutlineThickness(3);
-                if (selected) {
-                        shape.setOutlineColor(sf::Color::Green);
-                }
-                else {
-                        shape.setOutlineColor(sf::Color::Black);
-                }
-                shape.setPointCount(4);
-                shape.setPoint(0, {pos.x, pos.y});
-                shape.setPoint(1, {pos.x + size.x, pos.y});
-                shape.setPoint(2, {pos.x + size.x, pos.y + size.y});
-                shape.setPoint(3, {pos.x, pos.y + size.y});
-                shape.setFillColor(sf::Color::White);
+
+                auto shape = createSquircle(pos, size, sf::Color::White);
 
                 window.draw(shape);
 
@@ -113,8 +164,13 @@ public:
 
 };
 
-void boxes(vector<textBox>& boxes) {
-
+void ui(vector<textBox>& boxes, sf::RenderWindow& window, sf::Font& font) {
+        for (auto& box : boxes) {
+                box.use();
+                box.select(window);
+                box.Draw(window);
+                box.displayText(font, 18,window);
+        }
 }
 
 
@@ -136,11 +192,11 @@ int main() {
         // Boxes
 
         vector<textBox> boxes;
-        boxes.push_back(textBox({100,100}, {100, 100}, 1));
+        boxes.push_back(textBox({100,100}, {100, 50}, 1));
 
 
         sf::Font font;
-        if (!font.openFromFile("../assets/regular.OTF")) cerr << "Error loading font." << endl;
+        if (!font.openFromFile("../assets/bold.OTF")) cerr << "Error loading font." << endl;
 
 
 
@@ -152,16 +208,17 @@ int main() {
                                 window.close();
                         }
                         if (const auto* textEvent = event->getIf<sf::Event::TextEntered>()) {
-                                if (boxes[0].isSelected()) {
-                                        boxes[0].input(textEvent->unicode);
+                                for (auto& box : boxes) {
+                                        if (box.isSelected()) {
+                                                box.input(textEvent->unicode);
+                                        }
                                 }
+
                         }
                 }
                 window.clear(sf::Color::Black);
-                boxes[0].use();
-                boxes[0].select(window);
-                boxes[0].Draw(window);
-                boxes[0].displayText(font, 18,window);
+
+                ui(boxes, window, font);
 
 
                 window.display();
