@@ -5,6 +5,7 @@
 #include <ctime>
 #include <cmath>
 #include <vector>
+#include <fstream>
 
 int state{1};
 
@@ -12,12 +13,26 @@ bool shaky{false};
 
 using namespace std;
 
-void read() {
-
+string read(string name) {
+        std::ifstream input(name);
+        string line;
+        string result;
+        input >> line;
+        while (std::getline(input, line)) {
+                input >> line;
+                result = line + "\n";
+        }
+        return result;
 }
 
-void write() {
-
+void write(string name, vector<string> lines) {
+        std::ofstream output(name);
+        if (output.is_open()) {
+                for (const std::string& line : lines) {
+                        output << line << "\n";
+                }
+                output.close();
+        }
 }
 
 struct vec2 {
