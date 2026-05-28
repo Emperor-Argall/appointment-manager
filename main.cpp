@@ -269,23 +269,28 @@ int main() {
 
 
 
-        // Boxes
+        // Boxes ---------------------------------------------------------------------------------------------------------
 
         vector<textBox> boxes;
         boxes.push_back(textBox({100,100}, {100, 50}, 1));
 
+        // Font ----------------------------------------------------------------------------------------------------------
+
 
         sf::Font font;
         if (!font.openFromFile("../assets/bold.OTF")) cerr << "Error loading font." << endl;
+
+
+        // Sound ---------------------------------------------------------------------------------------------------------
 
         sf::SoundBuffer blockBuffer;
         if (!blockBuffer.loadFromFile("../assets/cutBlock.wav")) cerr << "Error loading sound." << endl;
         sf::Sound blockSound(blockBuffer);
         blockSound.setVolume(100);
 
-        blockSound.play();
+        /*blockSound.play();
         sf::sleep(sf::milliseconds(1));
-        blockSound.stop();
+        blockSound.stop();*/
 
         while (window.isOpen()) {
                 while (auto event = window.pollEvent()) {
@@ -304,7 +309,7 @@ int main() {
                 window.clear(sf::Color::Black);
 
                 ui(boxes, window, font);
-
+                // BLOCKED FOR EXCEEDING THE CHARACTER LIMIT
                 if (shaky) {
                         blockSound.stop();
                         blockSound.play();
